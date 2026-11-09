@@ -1,0 +1,38 @@
+import { useMemo, useState } from 'react'
+
+const seed = [
+  { id: 1, name: 'Tech Innovators Summit', date: '2026-12-12', time: '10:00', venue: 'Hyderabad Convention Centre', category: 'Technology', capacity: 250, registered: 184, status: 'Published' },
+  { id: 2, name: 'Design Futures Workshop', date: '2026-12-18', time: '14:30', venue: 'T-Hub, Hyderabad', category: 'Workshop', capacity: 80, registered: 52, status: 'Published' },
+  { id: 3, name: 'Community Clean-up Drive', date: '2026-12-22', time: '08:00', venue: 'KBR Park', category: 'Community', capacity: 100, registered: 36, status: 'Draft' },
+]
+const read = () => { try { return JSON.parse(localStorage.getItem('eventsync-events')) || seed } catch { return seed } }
+const moneyDate = d => new Date(`${d}T00:00:00`).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})
+function App() {
+  const [events,setEvents] = useState(read)
+  const [query,setQuery] = useState('')
+  const [filter,setFilter] = useState('All')
+  const [show,setShow] = useState(false)
+  const [form,setForm] = useState({name:'',date:'',time:'10:00',venue:'',category:'Technology',capacity:100})
+  const save = next => { setEvents(next); localStorage.setItem('eventsync-events',JSON.stringify(next)) }
+  const visible = useMemo(()=>events.filter(e=>(filter==='All'||e.status===filter)&&`${e.name} ${e.venue} ${e.category}`.toLowerCase().includes(query.toLowerCase())),[events,filter,query])
+  const total = events.reduce((n,e)=>n+Number(e.registered),0)
+  function create(e){ e.preventDefault(); if(!form.name.trim()||!form.date||!form.venue.trim()) return; save([{...form,id:Date.now(),registered:0,status:'Published'},...events]); setForm({name:'',date:'',time:'10:00',venue:'',category:'Technology',capacity:100}); setShow(false) }
+  function remove(id){ save(events.filter(e=>e.id!==id)) }
+  return <main className="min-h-screen">
+    <header className="border-b border-slate-800 bg-slate-950/90"><div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4"><a className="flex items-center gap-3 font-bold text-xl" href="#"><span className="grid h-10 w-10 place-items-center rounded-xl bg-cyan-400 text-slate-950">E</span>Event<span className="text-cyan-400">Sync</span></a><span className="hidden text-sm text-slate-400 sm:block">EVENT OPERATIONS WORKSPACE</span><button onClick={()=>setShow(true)} className="rounded-xl bg-cyan-400 px-4 py-2.5 text-sm font-bold text-slate-950 hover:bg-cyan-300">＋ Create event</button></div></header>
+    <div className="mx-auto max-w-7xl px-5 py-9">
+      <div className="mb-8"><p className="text-sm font-semibold uppercase tracking-[.22em] text-cyan-400">Overview / Events</p><h1 className="mt-2 text-3xl font-bold sm:text-4xl">Your events, <span className="text-cyan-400">in sync.</span></h1><p className="mt-2 max-w-2xl text-slate-400">Plan events, keep registrations organized and monitor attendance from one simple workspace.</p></div>
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {[['Total events',events.length,'Across your workspace'],['Registrations',total,'All events combined'],['Published',events.filter(e=>e.status==='Published').length,'Ready for attendees'],['Draft events',events.filter(e=>e.status==='Draft').length,'Still being prepared']].map(([label,value,note])=><article key={label} className="rounded-2xl border border-slate-800 bg-slate-900 p-5"><p className="text-sm text-slate-400">{label}</p><p className="mt-2 text-3xl font-bold">{value}</p><p className="mt-1 text-xs text-slate-500">{note}</p></article>)}
+      </section>
+      <section className="mt-9 rounded-2xl border border-slate-800 bg-slate-900">
+        <div className="flex flex-col gap-4 border-b border-slate-800 p-5 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="text-xl font-bold">Event directory</h2><p className="mt-1 text-sm text-slate-400">Search, filter and manage your events.</p></div><div className="flex flex-col gap-3 sm:flex-row"><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search events..." className="min-w-0 rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm outline-none focus:border-cyan-400 sm:w-56"/><select value={filter} onChange={e=>setFilter(e.target.value)} className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm"><option>All</option><option>Published</option><option>Draft</option></select></div></div>
+        <div className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-3">{visible.map(ev=><article key={ev.id} className="rounded-xl border border-slate-800 bg-slate-950 p-5 transition hover:-translate-y-1 hover:border-cyan-500/60"><div className="flex items-start justify-between gap-3"><span className="rounded-full bg-cyan-400/10 px-3 py-1 text-xs font-semibold text-cyan-300">{ev.category}</span><span className={`rounded-full px-3 py-1 text-xs ${ev.status==='Published'?'bg-emerald-400/10 text-emerald-300':'bg-amber-400/10 text-amber-300'}`}>{ev.status}</span></div><h3 className="mt-4 text-lg font-bold">{ev.name}</h3><p className="mt-2 text-sm text-slate-400">◷ {moneyDate(ev.date)} · {ev.time}</p><p className="mt-1 text-sm text-slate-400">⌖ {ev.venue}</p><div className="mt-5"><div className="mb-2 flex justify-between text-xs text-slate-400"><span>Registrations</span><span>{ev.registered}/{ev.capacity}</span></div><div className="h-2 overflow-hidden rounded-full bg-slate-800"><div className="h-full rounded-full bg-cyan-400" style={{width:`${Math.min(100,ev.registered/Math.max(1,ev.capacity)*100)}%`}}/></div></div><button onClick={()=>remove(ev.id)} className="mt-5 text-xs font-semibold text-rose-300 hover:text-rose-200">Delete event</button></article>)}
+        {!visible.length&&<p className="col-span-full py-12 text-center text-slate-400">No events match your search.</p>}</div>
+      </section>
+      <p className="mt-8 text-center text-xs text-slate-600">EventSync · Demo data is stored in this browser using localStorage.</p>
+    </div>
+    {show&&<div className="fixed inset-0 z-20 grid place-items-center overflow-y-auto bg-black/70 p-4"><form onSubmit={create} className="my-8 w-full max-w-lg rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl"><div className="mb-5 flex items-center justify-between"><h2 className="text-xl font-bold">Create an event</h2><button type="button" onClick={()=>setShow(false)} className="text-slate-400">✕</button></div><div className="grid gap-4 sm:grid-cols-2">{[['Event name','name','text'],['Date','date','date'],['Time','time','time'],['Venue','venue','text'],['Capacity','capacity','number']].map(([label,key,type])=><label key={key} className={`text-sm text-slate-300 ${key==='name'||key==='venue'?'sm:col-span-2':''}`}>{label}<input required value={form[key]} type={type} min={type==='number'?1:undefined} onChange={e=>setForm({...form,[key]:type==='number'?Number(e.target.value):e.target.value})} className="mt-1.5 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 outline-none focus:border-cyan-400"/></label>)}<label className="text-sm text-slate-300 sm:col-span-2">Category<select value={form.category} onChange={e=>setForm({...form,category:e.target.value})} className="mt-1.5 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5"><option>Technology</option><option>Workshop</option><option>Community</option><option>Business</option><option>Other</option></select></label></div><button className="mt-6 w-full rounded-xl bg-cyan-400 py-3 font-bold text-slate-950 hover:bg-cyan-300">Save event</button></form></div>}
+  </main>
+}
+export default App
