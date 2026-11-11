@@ -1,4 +1,4 @@
-# EventSync
+# EventSync(**Internship Project**)
 
 A responsive event management dashboard for creating events, tracking registrations and managing upcoming schedules.
 
